@@ -1,4 +1,0 @@
-flask
-requests
-volcenginesdkarkruntime
-gunicorn
