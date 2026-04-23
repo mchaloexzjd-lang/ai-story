@@ -10,7 +10,7 @@ app = Flask(__name__)
 # =========================
 client = Ark(
     base_url='https://ark.cn-beijing.volces.com/api/v3',
-    api_key='ark-d839f628-00eb-4fa8-9b27-cec00f26b144-fe90c' # ⚠️建议用环境变量
+    api_key=os.getenv("ARK_API_KEY") # ⚠️建议用环境变量
 )
 
 TEXT_MODEL = "ep-20260422190259-tlkv6"
