@@ -1,92 +1,379 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 <head>
-<meta charset="utf-8">
-<title>AI故事机</title>
+<meta charset="UTF-8">
+<title>礼宝故事世界</title>
 
 <style>
-body {
-    font-family: sans-serif;
-    padding: 20px;
-    background: #f5f5f5;
-}
-
-.container {
-    max-width: 500px;
-    margin: auto;
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-}
-
-#story {
-    margin-bottom: 15px;
-    line-height: 1.6;
-}
-
-img {
+html, body {
+    margin: 0;
+    padding: 0;
     width: 100%;
-    border-radius: 10px;
-    margin-bottom: 15px;
+    height: 100%;
+    overflow: hidden;
+    background: linear-gradient(#eaf6ff, #ffffff);
+    font-family: "Microsoft YaHei", sans-serif;
+}
+
+/* =========================
+   主容器
+========================= */
+#app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+/* =========================
+   中间图片
+========================= */
+#center-image {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    max-width: 55%;
+    max-height: 70%;
+
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+    background: white;
+}
+
+/* =========================
+   左下角：礼宝
+========================= */
+#libao-container {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+
+    width: 25vw;
+    height: 33vh;
+}
+
+/* 礼宝图片 */
+#libao {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+/* 视频覆盖在图片上 */
+#libao-video {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+
+    width: 25vw;
+    height: 33vh;
+
+    object-fit: contain;
+
+    display: none;
+    pointer-events: none;
+}
+
+
+/* 让礼宝可以点击 */
+#libao {
+    cursor: pointer;
+}
+/* =========================
+   思考状态 + 进度条
+========================= */
+#progress-box {
+    position: absolute;
+    top: -40px;
+    left: 10px;
+
+    width: 80%;
+    padding: 6px;
+
+    background: rgba(255,255,255,0.92);
+    border-radius: 8px;
+
+    font-size: 12px;
+
+    display: none;
+}
+
+#progress-bar {
+    height: 6px;
+    width: 100%;
+    background: #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+#progress-bar::after {
+    content: "";
+    display: block;
+    height: 100%;
+    width: 50%;
+    background: #4a90e2;
+}
+
+/* =========================
+   右下角对话框
+========================= */
+#dialog {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+
+    width: 320px;
+    min-height: 120px;
+
+    background: rgba(255,255,255,0.95);
+    border-radius: 14px;
+    padding: 14px;
+
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+
+    font-size: 15px;
+    line-height: 1.5;
+    color: #333;
+}
+
+/* =========================
+   输入区
+========================= */
+#input-box {
+    position: absolute;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+
+    display: flex;
+    gap: 8px;
+
+    z-index: 9999;
+}
+
+#user-input {
+    width: 260px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    outline: none;
 }
 
 button {
-    width: 45%;
-    margin: 5px;
-    padding: 12px;
-    font-size: 16px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    background: #4a90e2;
+    color: white;
+    cursor: pointer;
+}
+
+
+button:hover {
+    background: #357bd8;
+}
+
+button:disabled {
+    background: #aaa;
+    cursor: not-allowed;
 }
 </style>
-
 </head>
 
 <body>
 
-<div class="container">
+<div id="app">
 
-<h2>🌟 AI故事机</h2>
+    <!-- 中间图片 -->
+    <img id="center-image" src="" />
 
-<p id="story">在森林里，小熊找不到回家的路。</p>
+    <!-- 左下角礼宝 -->
+    <div id="libao-container">
 
-<img id="image" src="" />
+        <div id="progress-box">
+            <div>礼宝正在思考...</div>
+            <div id="progress-bar"></div>
+        </div>
 
-<div id="buttons">
-    <button onclick="send('A')">A</button>
-    <button onclick="send('B')">B</button>
-    <button onclick="send('C')">C</button>
-    <button onclick="send('D')">D</button>
-</div>
+        <img id="libao"
+             src="/static/photo/礼宝.jpg"
+             onclick="toggleLibao()"
+             style="cursor:pointer;">
+
+        <!-- 🎬 视频层（默认隐藏） -->
+        <video id="libao-video" loop muted>
+            <source src="/static/photo/礼宝_说话.mp4" type="video/mp4">
+        </video>
+
+    </div>
+
+    <!-- 右下角故事 -->
+    <div id="dialog">我是礼宝，故事还没有开始哦～</div>
+
+    <!-- 输入区 -->
+    <div id="input-box">
+        <input id="user-input" placeholder="输入你的选择或想法..." />
+        <button onclick="startVoice()">🎤 说话</button>
+        <button id="send-btn" onclick="send()">发送</button>
+    </div>
 
 </div>
 
 <script>
+    let storyText = "";
+let libaoState = "idle"; // idle / playing
+let locked = false;
 
-let story = "在森林里，小熊找不到回家的路。";
+async function send() {
 
-async function send(choice) {
+    if (locked) return;
 
-    document.getElementById("story").innerText = "⏳ 正在生成...";
+    const inputEl = document.getElementById("user-input");
+    const btn = document.getElementById("send-btn");
 
-    const res = await fetch("/story", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            story: story,
-            input: choice
-        })
-    });
+    const input = inputEl.value.trim();
+    if (!input) return;
 
-    const data = await res.json();
+    locked = true;
 
-    story = data.story;
+    /* =========================
+       进入加载状态
+    ========================= */
+    inputEl.disabled = true;
+    btn.disabled = true;
 
-    document.getElementById("story").innerText = data.story;
-    document.getElementById("image").src = data.image;
+    document.getElementById("libao").src = "/static/photo/礼宝_思考.jpg";
+    document.getElementById("progress-box").style.display = "block";
+
+    try {
+        const res = await fetch("/story", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                story: "",
+                input: input
+            })
+        });
+
+        const data = await res.json();
+        storyText = data.story;
+        document.getElementById("dialog").innerText = storyText;
+        const libao = document.getElementById("libao");
+        libao.onclick = toggleLibao;
+        libao.style.cursor = "pointer";
+        document.getElementById("center-image").src = data.image;
+
+    } catch (e) {
+        console.error(e);
+        alert("请求失败");
+    }
+
+    /* =========================
+       恢复状态
+    ========================= */
+    document.getElementById("progress-box").style.display = "none";
+    inputEl.disabled = false;
+    btn.disabled = false;
+    inputEl.value = "";
+    locked = false;
+    // ⭐只在生成完成后允许点击礼宝
+    document.getElementById("libao").style.cursor = "pointer";
+    document.getElementById("libao").onclick = toggleLibao;
+
+    document.getElementById("libao").src = "/static/photo/礼宝.jpg";
+    inputEl.disabled = false;
+    btn.disabled = false;
+
+    inputEl.value = "";
+    locked = false;
 }
-
 </script>
+<script>
 
+// =========================
+// 🎤 语音输入（只填文字，不自动发送）
+// =========================
+function startVoice() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+        alert("当前浏览器不支持语音输入，请使用Chrome");
+        return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "zh-CN";
+    recognition.interimResults = false;
+
+    recognition.start();
+
+    // 🎯 语音识别结果 → 填入输入框（可修改）
+    recognition.onresult = function(event) {
+        const text = event.results[0][0].transcript;
+
+        const input = document.getElementById("user-input");
+
+        // ⭐填入但不发送（关键）
+        input.value = text;
+    };
+
+    recognition.onerror = function(err) {
+        console.error(err);
+        alert("语音识别失败");
+    };
+}
+function toggleLibao() {
+
+    const img = document.getElementById("libao");
+    const video = document.getElementById("libao-video");
+
+    // =====================
+    // 🎯 如果正在播放 → 停止
+    // =====================
+    if (video.style.display === "block") {
+
+        video.pause();
+        video.style.display = "none";
+
+        img.style.display = "block";
+
+        speechSynthesis.cancel();
+        return;
+    }
+
+    // =====================
+    // 🎯 开始播放
+    // =====================
+
+    img.style.display = "none";
+    video.style.display = "block";
+
+    video.loop = true;
+    video.muted = true;
+    video.currentTime = 0;
+
+    video.play();
+
+    // =====================
+    // 🔊 语音测试逻辑
+    // =====================
+
+    const text = (typeof storyText !== "undefined" && storyText)
+        ? storyText
+        : "你好，我是礼宝";
+
+    speak(text);
+}
+function speak(text) {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "zh-CN";
+    utter.rate = 0.9;
+    utter.pitch = 1.2;
+
+    speechSynthesis.speak(utter);
+}
+</script>
 </body>
 </html>
