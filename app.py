@@ -119,6 +119,7 @@ def continue_story(story, user_input):
 【输出格式（必须严格）】
 故事：xxx（推进剧情 + 自然提问）
 选择： A.xxx B.xxx C.xxx D.xxx
+（若文本输入结束故事类似的话则输出最后的故事加总结（可以无视之前的字数，限制多一些字））
 
 【禁止】
 - 禁止无逻辑跳跃剧情
@@ -256,4 +257,5 @@ def proxy_image():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
 
