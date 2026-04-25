@@ -18,6 +18,7 @@ html, body {
 /* =========================
    主容器
 ========================= */
+
 #app {
     position: relative;
     width: 100%;
@@ -29,16 +30,17 @@ html, body {
 ========================= */
 #center-image {
     position: absolute;
-    top: 50%;
+    top: 45%;
     left: 50%;
     transform: translate(-50%, -50%);
 
-    max-width: 55%;
-    max-height: 70%;
+    max-width: 75%;
+    max-height: 75%;
 
     border-radius: 16px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.25);
     background: white;
+    z-index: 2;
 }
 
 /* =========================
@@ -46,11 +48,15 @@ html, body {
 ========================= */
 #libao-container {
     position: absolute;
-    left: 0;
+    left: -100px;;
     bottom: 0;
 
     width: 25vw;
     height: 33vh;
+}
+
+#libao-container.locked {
+    pointer-events: none;
 }
 
 /* 礼宝图片 */
@@ -58,29 +64,20 @@ html, body {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    pointer-events: none;
 }
 
-/* 视频覆盖在图片上 */
+#libao-img,
 #libao-video {
     position: absolute;
     left: 0;
     bottom: 0;
 
-    width: 25vw;
-    height: 33vh;
+    width: 100%;
+    height: 100%;
 
     object-fit: contain;
-
-    display: none;
-    pointer-events: none;
 }
 
-
-/* 让礼宝可以点击 */
-#libao {
-    cursor: pointer;
-}
 /* =========================
    思考状态 + 进度条
 ========================= */
@@ -95,7 +92,7 @@ html, body {
     background: rgba(255,255,255,0.92);
     border-radius: 8px;
 
-    font-size: 12px;
+    font-size: 10px;
 
     display: none;
 }
@@ -114,6 +111,8 @@ html, body {
     height: 100%;
     width: 50%;
     background: #4a90e2;
+
+    transform: translateX(20px); /* ⭐往右移动 */
 }
 
 /* =========================
@@ -133,9 +132,15 @@ html, body {
 
     box-shadow: 0 8px 25px rgba(0,0,0,0.15);
 
-    font-size: 15px;
+    font-size: 20px;
     line-height: 1.5;
     color: #333;
+    z-index: 2
+}
+
+#gallery img:hover {
+    transform: scale(1.05);
+    cursor: pointer;
 }
 
 /* =========================
@@ -156,15 +161,42 @@ html, body {
 #user-input {
     width: 260px;
     padding: 8px 10px;
+    font-size: 18px;   /* ⭐文字变大 */
     border-radius: 8px;
     border: 1px solid #ccc;
     outline: none;
 }
 
+/* =========================
+   开场动画层
+========================= */
+#intro-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    background: #f5f1e8;
+    background-size: cover;
+    background-position: center;
+
+    z-index: 99999;
+}
+
+#intro-video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;   /* ⭐关键 */
+    background: #f5f1e8; ;     /* ⭐避免黑边突兀 */
+}
+
+
 button {
-    padding: 8px 12px;
+    padding: 12px 18px;
+    font-size: 18px;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     background: #4a90e2;
     color: white;
     cursor: pointer;
@@ -173,6 +205,8 @@ button {
 
 button:hover {
     background: #357bd8;
+    transform: scale(1.05);
+    transition: 0.2s;
 }
 
 button:disabled {
@@ -185,6 +219,12 @@ button:disabled {
 <body>
 
 <div id="app">
+        <!-- ⭐ 开场动画层 -->
+    <div id="intro-screen">
+        <video id="intro-video" playsinline>
+            <source src="/static/video/翻书.mp4" type="video/mp4">
+        </video>
+    </div>
 
     <!-- 中间图片 -->
     <img id="center-image" src="" />
@@ -197,34 +237,152 @@ button:disabled {
             <div id="progress-bar"></div>
         </div>
 
-        <img id="libao"
-             src="/static/photo/礼宝.jpg"
-             onclick="toggleLibao()"
-             style="cursor:pointer;">
+        <img id="libao-img" src="/static/photo/礼宝.png" onclick="clickLibao()" style="cursor:pointer;" />
 
-        <!-- 🎬 视频层（默认隐藏） -->
-        <video id="libao-video" loop muted>
-            <source src="/static/photo/礼宝_说话.mp4" type="video/mp4">
+         <!-- 思考视频 -->
+        <video id="libao-thinking-video"
+            style="display:none; width:100%; height:100%; object-fit:contain;"
+            loop playsinline>
+                <source src="/static/video/礼宝_思考.mp4" type="video/mp4">
+        </video>
+
+        <!-- 说话视频 -->
+        <video id="libao-video" style="display:none; width:100%; height:100%; object-fit:contain;" onclick="clickLibao()">
+            <source src="/static/video/礼宝_说话.mp4" type="video/mp4">
         </video>
 
     </div>
 
     <!-- 右下角故事 -->
-    <div id="dialog">我是礼宝，故事还没有开始哦～</div>
+    <div id="dialog">我是礼宝，我们一起开始今天的故事吧</div>
 
     <!-- 输入区 -->
     <div id="input-box">
         <input id="user-input" placeholder="输入你的选择或想法..." />
         <button onclick="startVoice()">🎤 说话</button>
         <button id="send-btn" onclick="send()">发送</button>
+        <button id="hint-btn" onclick="showChoices()">💡 提示</button>
+    </div>
+
+    <button id="gallery-btn" onclick="toggleGallery()" style="
+    position:absolute;
+    top:20px;
+    right:20px;
+    z-index:10000;
+    ">
+    📷 图库
+    </button>
+    <div id="gallery" style="
+        display:none;
+        position:absolute;
+        top:0;
+        left:0;
+        width:100%;
+        height:100%;
+        background:#f5f1e8;
+        z-index:9999;
+        overflow:auto;
+        padding:20px;
+    ">
+        <button onclick="toggleGallery()">⬅ 返回</button>
+        <div id="gallery-list" style="
+            display:flex;
+            flex-wrap:wrap;
+            gap:10px;
+            margin-top:10px;
+        "></div>
+    </div>
+
+    <div id="choice-box" style="
+        display:none;
+        position:absolute;
+        right:20px;
+        bottom:160px;
+        width:320px;
+        background:white;
+        border-radius:12px;
+        padding:12px;
+        box-shadow:0 10px 30px rgba(0,0,0,0.2);
+        font-size:14px;
+        z-index: 3
+    ">
     </div>
 
 </div>
 
 <script>
-    let storyText = "";
-let libaoState = "idle"; // idle / playing
 let locked = false;
+let talking = false;
+let audioPlayer = null;
+let audioPlayer1 = null;
+let fullStory = "";   // ⭐保存完整故事（核心）
+let imageHistory = [];   // ⭐保存图片历史
+const preloadImg = new Image();
+preloadImg.src = "/static/photo/翻书_最后一页.jpg";
+let isPlaying = false;
+
+function clickLibao() {
+    const img = document.getElementById("libao-img");
+    const video = document.getElementById("libao-video");
+
+    talking = !talking;
+
+    if (talking) {
+        img.style.display = "none";
+        video.style.display = "block";
+
+        video.loop = true;
+        video.muted = true;
+        video.playsInline = true;
+        video.load();
+        video.play().catch(console.log);
+
+        if (audioPlayer) {
+            audioPlayer.play();
+            return;
+        }
+
+        // ⭐核心：触发文字播放
+        const text = document.getElementById("dialog").innerText;
+
+        fetch("/tts", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ text: text })
+        })
+        .then(res => res.blob())
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+
+            audioPlayer = new Audio(url);
+
+            audioPlayer.onended = function () {
+            talking = false;
+
+            const img = document.getElementById("libao-img");
+            const video = document.getElementById("libao-video");
+
+            video.pause();
+            video.currentTime = 0;
+
+            video.style.display = "none";
+            img.style.display = "block";
+    };
+            audioPlayer.play();
+        });
+
+    } else {
+        video.pause();
+        video.currentTime = 0;
+
+        video.style.display = "none";
+        img.style.display = "block";
+
+        if (audioPlayer) {
+            audioPlayer.pause();
+        }
+    }
+}
 
 async function send() {
 
@@ -244,26 +402,64 @@ async function send() {
     inputEl.disabled = true;
     btn.disabled = true;
 
-    document.getElementById("libao").src = "/static/photo/礼宝_思考.jpg";
+    const img = document.getElementById("libao-img");
+    const thinkingVideo = document.getElementById("libao-thinking-video");
+
+    // 切换显示
+    img.style.display = "none";
+    thinkingVideo.style.display = "block";
+    thinkingVideo.volume = 0.4
+    // 播放循环视频
+    thinkingVideo.currentTime = 0;
+    // ⭐关键：尝试播放
+    thinkingVideo.play().catch(err => {
+        console.log("自动播放被拦截，需要用户交互");
+    });
+
     document.getElementById("progress-box").style.display = "block";
+    document.getElementById("libao-container").classList.add("locked");
 
     try {
         const res = await fetch("/story", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
-                story: "",
+                story: fullStory,   // ⭐传完整历史
                 input: input
             })
         });
 
         const data = await res.json();
-        storyText = data.story;
-        document.getElementById("dialog").innerText = storyText;
-        const libao = document.getElementById("libao");
-        libao.onclick = toggleLibao;
-        libao.style.cursor = "pointer";
-        document.getElementById("center-image").src = data.image;
+        fullStory += data.story;
+        document.getElementById("dialog").innerText = data.story;
+        window.currentChoices = data.choices;
+        if (data.image) {
+            document.getElementById("center-image").src = data.image;
+
+            // ⭐保存历史
+            imageHistory.push(data.image);
+        }
+
+        const audioRes = await fetch("/tts", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ text: data.story })
+        });
+
+        const blob = await audioRes.blob();
+        const url = URL.createObjectURL(blob);
+        audioPlayer = new Audio(url);
+
+        const audioRes1 = await fetch("/tts", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ text: data.choices })
+        });
+
+        const blob1 = await audioRes1.blob();
+        const url1 = URL.createObjectURL(blob1);
+        audioPlayer1 = new Audio(url1);
+
 
     } catch (e) {
         console.error(e);
@@ -273,24 +469,19 @@ async function send() {
     /* =========================
        恢复状态
     ========================= */
-    document.getElementById("progress-box").style.display = "none";
-    inputEl.disabled = false;
-    btn.disabled = false;
-    inputEl.value = "";
-    locked = false;
-    // ⭐只在生成完成后允许点击礼宝
-    document.getElementById("libao").style.cursor = "pointer";
-    document.getElementById("libao").onclick = toggleLibao;
 
-    document.getElementById("libao").src = "/static/photo/礼宝.jpg";
+    thinkingVideo.pause();
+    thinkingVideo.currentTime = 0;
+    thinkingVideo.style.display = "none";
+    img.style.display = "block";
+    document.getElementById("progress-box").style.display = "none";
+    document.getElementById("libao-container").classList.remove("locked");
     inputEl.disabled = false;
     btn.disabled = false;
 
     inputEl.value = "";
     locked = false;
 }
-</script>
-<script>
 
 // =========================
 // 🎤 语音输入（只填文字，不自动发送）
@@ -319,61 +510,162 @@ function startVoice() {
         input.value = text;
     };
 
-    recognition.onerror = function(err) {
-        console.error(err);
-        alert("语音识别失败");
+    recognition.onerror = function(event) {
+        console.error("语音错误类型：", event.error);
+        alert("语音识别失败：" + event.error);
     };
 }
-function toggleLibao() {
 
-    const img = document.getElementById("libao");
-    const video = document.getElementById("libao-video");
+function showChoices() {
+    const box = document.getElementById("choice-box");
 
-    // =====================
-    // 🎯 如果正在播放 → 停止
-    // =====================
-    if (video.style.display === "block") {
+    if (!box) return;
 
-        video.pause();
-        video.style.display = "none";
-
-        img.style.display = "block";
-
-        speechSynthesis.cancel();
+    // 切换显示
+    if (box.style.display === "block") {
+        box.style.display = "none";
         return;
     }
 
-    // =====================
-    // 🎯 开始播放
-    // =====================
+    if (!window.currentChoices) {
+        box.innerText = "还没加载出来呢";
+        box.style.display = "block";
+        return;
+    }
 
-    img.style.display = "none";
-    video.style.display = "block";
+    // ⭐解析
+    const choices = parseChoices(window.currentChoices);
 
-    video.loop = true;
-    video.muted = true;
-    video.currentTime = 0;
+    // ⭐清空
+    box.innerHTML = "";
 
-    video.play();
+    // ⭐生成按钮
+    choices.forEach(item => {
+        const btn = document.createElement("button");
 
-    // =====================
-    // 🔊 语音测试逻辑
-    // =====================
+        btn.innerText = `${item.key}. ${item.text}`;
+        btn.style.display = "block";
+        btn.style.width = "100%";
+        btn.style.marginBottom = "6px";
 
-    const text = (typeof storyText !== "undefined" && storyText)
-        ? storyText
-        : "你好，我是礼宝";
+        // ⭐点击填入输入框
+        btn.onclick = () => {
+            document.getElementById("user-input").value = `选择${item.key}：${item.text}`;
+            box.style.display = "none";
+        };
 
-    speak(text);
+        box.appendChild(btn);
+    });
+
+    box.style.display = "block";
+
+    // ⭐播放语音
+    if (audioPlayer1) {
+        audioPlayer1.play();
+    }
 }
-function speak(text) {
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = "zh-CN";
-    utter.rate = 0.9;
-    utter.pitch = 1.2;
 
-    speechSynthesis.speak(utter);
+function parseChoices(choicesText) {
+    const result = [];
+
+    const regex = /([A-D])\.\s*([^A-D]*)/g;
+    let match;
+
+    while ((match = regex.exec(choicesText)) !== null) {
+        result.push({
+            key: match[1],
+            text: match[2].trim()
+        });
+    }
+
+    return result;
 }
+
+function toggleGallery() {
+    const gallery = document.getElementById("gallery");
+    const list = document.getElementById("gallery-list");
+
+    if (gallery.style.display === "block") {
+        gallery.style.display = "none";
+        return;
+    }
+
+    gallery.style.display = "block";
+    list.innerHTML = "";
+
+    // ⭐ 空判断
+    if (imageHistory.length === 0) {
+        list.innerHTML = "<div style='font-size:18px;'>先生成你的故事吧小朋友～</div>";
+        return;
+    }
+
+    imageHistory.forEach(url => {
+        const wrapper = document.createElement("div");
+
+        const img = document.createElement("img");
+        img.src = url;
+        img.style.width = "400px";  // ⭐两倍
+        img.style.borderRadius = "12px";
+        img.style.boxShadow = "0 6px 20px rgba(0,0,0,0.15)";
+        img.style.margin = "10px";
+
+        // 点击下载
+        img.onclick = () => downloadImage(url);
+
+        wrapper.appendChild(img);
+        list.appendChild(wrapper);
+    });
+}
+function downloadImage(url) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "story_image.png";  // ⭐下载文件名
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+window.onload = function () {
+    const video = document.getElementById("intro-video");
+    const screen = document.getElementById("intro-screen");
+    let introPlayed = false; // ⭐只允许一次
+
+    // ⭐点击开始播放
+    screen.onclick = function () {
+        if (introPlayed) return;   // ⭐已经播放过就不再执行
+        introPlayed = true;
+
+        video.play();
+    };
+
+    // ⭐播放结束
+    video.onended = function () {
+
+        // ⭐1. 视频渐隐（电影感）
+        video.style.transition = "opacity 0.5s";
+        video.style.opacity = "0";
+
+        setTimeout(() => {
+            // ⭐2. 隐藏视频
+            video.pause();
+            video.style.display = "none";
+            // ⭐3. 切背景（最后一页）
+            const bg = `url('${preloadImg.src}') center center / cover no-repeat`;
+            screen.style.background = bg;
+            document.body.style.background = bg;
+            // ⭐4. 停留一下（翻书停顿）
+            setTimeout(() => {
+                // ⭐5. 整体淡出进入主界面
+                screen.style.transition = "opacity 1s";
+                screen.style.opacity = "0";
+                setTimeout(() => {
+                    screen.style.display = "none";
+                }, 1000);
+            }, 800);
+
+        }, 300);
+    };
+};
 </script>
 </body>
 </html>
