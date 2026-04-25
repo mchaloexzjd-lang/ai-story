@@ -1,10 +1,10 @@
-import base64
 import re
-
 import requests
-import json
-from flask import Flask, request, jsonify, render_template, Response
+from flask import Flask, request, jsonify, render_template, Response, send_file
 from volcenginesdkarkruntime import Ark
+import json
+import base64
+from io import BytesIO
 
 app = Flask(__name__)
 
@@ -27,7 +27,6 @@ TTS_HEADERS = {
     "x-api-key": os.getenv("TTS_API_KEY"),
     "X-Api-Resource-Id": os.getenv("TTS_RESOURCE_ID"),
     "Content-Type": "application/json"
-}
 def generate_audio(text):
     data = {
         "req_params": {
@@ -211,9 +210,17 @@ def tts_api():
 def home():
     return render_template("index.html")
 
+@app.route("/proxy_image")
+def proxy_image():
+    url = request.args.get("url")
 
-# =========================
-# 7. 启动
-# =========================
+    r = requests.get(url)
+    return send_file(
+        BytesIO(r.content),
+        mimetype="image/jpeg"
+    )
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
