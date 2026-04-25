@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <title>礼宝故事世界</title>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <style>
 html, body {
     margin: 0;
@@ -48,11 +49,18 @@ html, body {
 ========================= */
 #libao-container {
     position: absolute;
-    left: -100px;;
+    left: -100px;
     bottom: 0;
 
     width: 25vw;
     height: 33vh;
+
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(20px);
+
+    border-radius: 40px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    mask-image: radial-gradient(circle, black 50%, transparent 60%);
 }
 
 #libao-container.locked {
@@ -254,7 +262,7 @@ button:disabled {
     </div>
 
     <!-- 右下角故事 -->
-    <div id="dialog">我是礼宝，我们一起开始今天的故事吧</div>
+    <div id="dialog">大家好!我是礼宝，让我们一起开启今天的故事会吧~</div>
 
     <!-- 输入区 -->
     <div id="input-box">
@@ -264,14 +272,24 @@ button:disabled {
         <button id="hint-btn" onclick="showChoices()">💡 提示</button>
     </div>
 
-    <button id="gallery-btn" onclick="toggleGallery()" style="
-    position:absolute;
-    top:20px;
-    right:20px;
-    z-index:10000;
-    ">
-    📷 图库
-    </button>
+    <img
+        id="gallery-btn"
+        src="/static/photo/gallery.png"
+        onclick="toggleGallery()"
+        style="
+            position:absolute;
+            top:20px;
+            right:20px;
+            z-index:10000;
+            width:300px;      /* ⭐变大 */
+            height:300px;
+            cursor:pointer;
+            border-radius:12px;
+            transition:0.2s;
+        "
+        onmouseover="this.style.transform='scale(1.1)'"
+        onmouseout="this.style.transform='scale(1)'"
+    />
     <div id="gallery" style="
         display:none;
         position:absolute;
@@ -285,6 +303,19 @@ button:disabled {
         padding:20px;
     ">
         <button onclick="toggleGallery()">⬅ 返回</button>
+            <!-- ⭐就在这里加 ZIP按钮 -->
+        <button onclick="downloadZip()" style="
+            margin:10px;
+            padding:10px 16px;
+            font-size:16px;
+            border-radius:10px;
+            background:#4a90e2;
+            color:white;
+            border:none;
+            cursor:pointer;
+        ">
+        📦 一键下载故事ZIP
+        </button>
         <div id="gallery-list" style="
             display:flex;
             flex-wrap:wrap;
@@ -315,8 +346,10 @@ let locked = false;
 let talking = false;
 let audioPlayer = null;
 let audioPlayer1 = null;
+let hasStartedStory = false;
 let fullStory = "";   // ⭐保存完整故事（核心）
 let imageHistory = [];   // ⭐保存图片历史
+let audioHistory = [];
 const preloadImg = new Image();
 preloadImg.src = "/static/photo/翻书_最后一页.jpg";
 let isPlaying = false;
@@ -337,39 +370,15 @@ function clickLibao() {
         video.load();
         video.play().catch(console.log);
 
-        if (audioPlayer) {
-            audioPlayer.play();
+        if (!hasStartedStory) {
+            introAudio.currentTime = 0;
+            introAudio.play();
             return;
         }
 
-        // ⭐核心：触发文字播放
-        const text = document.getElementById("dialog").innerText;
-
-        fetch("/tts", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ text: text })
-        })
-        .then(res => res.blob())
-        .then(blob => {
-            const url = URL.createObjectURL(blob);
-
-            audioPlayer = new Audio(url);
-
-            audioPlayer.onended = function () {
-            talking = false;
-
-            const img = document.getElementById("libao-img");
-            const video = document.getElementById("libao-video");
-
-            video.pause();
-            video.currentTime = 0;
-
-            video.style.display = "none";
-            img.style.display = "block";
-    };
+        if (audioPlayer) {
             audioPlayer.play();
-        });
+        }
 
     } else {
         video.pause();
@@ -387,10 +396,10 @@ function clickLibao() {
 async function send() {
 
     if (locked) return;
-
+    hasStartedStory = true;
     const inputEl = document.getElementById("user-input");
     const btn = document.getElementById("send-btn");
-
+    const hint_btn = document.getElementById("hint-btn");
     const input = inputEl.value.trim();
     if (!input) return;
 
@@ -401,7 +410,7 @@ async function send() {
     ========================= */
     inputEl.disabled = true;
     btn.disabled = true;
-
+    hint_btn.disabled = true;
     const img = document.getElementById("libao-img");
     const thinkingVideo = document.getElementById("libao-thinking-video");
 
@@ -449,7 +458,8 @@ async function send() {
         const blob = await audioRes.blob();
         const url = URL.createObjectURL(blob);
         audioPlayer = new Audio(url);
-
+        audioPlayer.onended = stopTalking;
+        audioHistory.push(blob);
         const audioRes1 = await fetch("/tts", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
@@ -478,7 +488,7 @@ async function send() {
     document.getElementById("libao-container").classList.remove("locked");
     inputEl.disabled = false;
     btn.disabled = false;
-
+    hint_btn.disabled = false;
     inputEl.value = "";
     locked = false;
 }
@@ -595,7 +605,7 @@ function toggleGallery() {
 
     // ⭐ 空判断
     if (imageHistory.length === 0) {
-        list.innerHTML = "<div style='font-size:18px;'>先生成你的故事吧小朋友～</div>";
+        list.innerHTML = "<div style='font-size:20px;'>快创作你的故事吧小朋友～</div>";
         return;
     }
 
@@ -625,11 +635,24 @@ function downloadImage(url) {
     document.body.removeChild(a);
 }
 
+function stopTalking() {
+    const img = document.getElementById("libao-img");
+    const video = document.getElementById("libao-video");
+
+    video.pause();
+    video.currentTime = 0;
+    video.style.display = "none";
+
+    img.style.display = "block";
+    talking = false;
+}
+
 window.onload = function () {
     const video = document.getElementById("intro-video");
     const screen = document.getElementById("intro-screen");
     let introPlayed = false; // ⭐只允许一次
-
+    introAudio = new Audio("/static/audio/welcome.mp3");
+    introAudio.onended = stopTalking;
     // ⭐点击开始播放
     screen.onclick = function () {
         if (introPlayed) return;   // ⭐已经播放过就不再执行
@@ -666,6 +689,56 @@ window.onload = function () {
         }, 300);
     };
 };
+
+async function downloadZip() {
+
+    if (imageHistory.length === 0) {
+        alert("还没有故事内容哦");
+        return;
+    }
+
+    const zip = new JSZip();
+    const imgFolder = zip.folder("images");
+    const audioFolder = zip.folder("audio");
+
+    // ======================
+    // 图片 + 音频打包（安全版）
+    // ======================
+    const len = imageHistory.length;
+
+    for (let i = 0; i < len; i++) {
+        const url = "/proxy_image?url=" + encodeURIComponent(imageHistory[i]);
+
+        const res = await fetch(url);
+        const blob = await res.blob();
+
+        imgFolder.file(`img_${i}.jpeg`, blob);
+        // -------- 音频 --------
+        const audio = audioHistory[i];
+
+        if (audio instanceof Blob) {
+            audioFolder.file(`audio_${i}.mp3`, audio);
+        }
+    }
+
+    // ======================
+    // 文本
+    // ======================
+    zip.file("story.txt", fullStory || "");
+
+    // ======================
+    // 生成 ZIP（关键）
+    // ======================
+    zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 }
+    }).then(function (content) {
+        saveAs(content, "礼宝故事.zip");
+    }).catch(err => {
+        console.error("ZIP生成失败:", err);
+    });
+}
 </script>
 </body>
 </html>
