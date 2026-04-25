@@ -27,6 +27,7 @@ TTS_HEADERS = {
     "x-api-key": os.getenv("TTS_API_KEY"),
     "X-Api-Resource-Id": os.getenv("TTS_RESOURCE_ID"),
     "Content-Type": "application/json"
+}
 def generate_audio(text):
     data = {
         "req_params": {
